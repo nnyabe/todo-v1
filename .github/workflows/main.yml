@@ -34,6 +34,6 @@ jobs:
 
       - name: Deploy DynamoDB Table
         run: |
-            sam deploy --template-file template.yaml \
+            sam deploy --template-file Todo-Dynamo-Sam.yml \
                 --stack-name todo-dynamodb-stack \
                 --capabilities CAPABILITY_IAM
