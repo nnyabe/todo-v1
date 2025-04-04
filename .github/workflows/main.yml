@@ -27,8 +27,13 @@ jobs:
         run: |
           pip install aws-sam-cli
 
+      - name: Debug - Check Files
+        run: |
+            pwd
+            ls -la
+
       - name: Deploy DynamoDB Table
         run: |
-          sam deploy --template-file template.yaml \
-            --stack-name todo-dynamodb-stack \
-            --capabilities CAPABILITY_IAM
+            sam deploy --template-file template.yaml \
+                --stack-name todo-dynamodb-stack \
+                --capabilities CAPABILITY_IAM
