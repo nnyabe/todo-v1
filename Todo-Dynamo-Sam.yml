@@ -16,6 +16,7 @@ Resources:
       SSESpecification:
         SSEEnabled: true
 
+
 Outputs:
   TodoTableName:
     Description: "DynamoDB Table Name"
