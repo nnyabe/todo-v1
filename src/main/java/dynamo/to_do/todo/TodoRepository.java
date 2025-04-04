@@ -22,13 +22,13 @@ public class TodoRepository {
         this.dynamoDbClient = dynamoDbClient;
     }
 
-//    @PostConstruct
-//    public void init() {
-//        DynamoDbEnhancedClient enhancedClient = DynamoDbEnhancedClient.builder()
-//                .dynamoDbClient(dynamoDbClient)
-//                .build();
-//        todoTable = enhancedClient.table("Todos", TableSchema.fromBean(Todo.class));
-//    }
+    @PostConstruct
+    public void init() {
+        DynamoDbEnhancedClient enhancedClient = DynamoDbEnhancedClient.builder()
+                .dynamoDbClient(dynamoDbClient)
+                .build();
+        todoTable = enhancedClient.table("Todos", TableSchema.fromBean(Todo.class));
+    }
 
     public Todo save(Todo todo) {
         if (todo.getId() == null) {
