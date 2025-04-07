@@ -46,6 +46,7 @@ jobs:
 
   trigger-sam-repo:
     runs-on: ubuntu-latest
+
     steps:
       - name: Trigger `todo-v1-sam` workflow
         run: |
