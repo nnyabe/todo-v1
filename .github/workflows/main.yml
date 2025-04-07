@@ -43,3 +43,14 @@ jobs:
       - name: Push image to Amazon ECR
         run: |
           docker push 195275642256.dkr.ecr.eu-central-1.amazonaws.com/todo-repo:latest
+
+  trigger-sam-repo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger `todo-v1-sam` workflow
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.REPO_ACCESS_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/nnyabe/todo-v1-sam/actions/workflows/deploy.yml/dispatches \
+            -d '{"ref":"main"}'
