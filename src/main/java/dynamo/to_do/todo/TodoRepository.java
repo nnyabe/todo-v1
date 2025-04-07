@@ -27,7 +27,8 @@ public class TodoRepository {
         DynamoDbEnhancedClient enhancedClient = DynamoDbEnhancedClient.builder()
                 .dynamoDbClient(dynamoDbClient)
                 .build();
-        todoTable = enhancedClient.table("Todos", TableSchema.fromBean(Todo.class));
+        todoTable = enhancedClient.table(
+                "TodoTable", TableSchema.fromBean(Todo.class));
     }
 
     public Todo save(Todo todo) {

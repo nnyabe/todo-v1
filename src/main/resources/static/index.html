@@ -37,7 +37,8 @@
 
         body.dark-mode .task-item input[type="text"],
         body.dark-mode .task-item input[type="date"],
-        body.dark-mode .task-item input[type="time"] {
+        body.dark-mode .task-item input[type="time"],
+        body.dark-mode .task-item textarea {
             background-color: #4a4a4a;
             color: #ffffff;
             border: none;
@@ -72,7 +73,8 @@
 
         body.light-mode .task-item input[type="text"],
         body.light-mode .task-item input[type="date"],
-        body.light-mode .task-item input[type="time"] {
+        body.light-mode .task-item input[type="time"],
+        body.light-mode .task-item textarea {
             background-color: #f8f9fa;
             color: #000000;
             border: 1px solid #ced4da;
@@ -100,7 +102,7 @@
         }
 
         .sidebar {
-           A flex: 1;
+            flex: 1;
             padding: 20px;
             transition: background-color 0.3s;
             border-left: 1px solid #4a4a4a;
@@ -182,7 +184,8 @@
 
         .task-item input[type="text"],
         .task-item input[type="date"],
-        .task-item input[type="time"] {
+        .task-item input[type="time"],
+        .task-item textarea {
             width: 100%;
             padding: 5px;
             font-size: 16px;
@@ -221,6 +224,22 @@
             background-color: rgba(255, 255, 255, 0.1);
             margin-bottom: 10px;
             border-radius: 5px;
+            border-bottom: 1px solid #4a4a4a; /* Added thin line between pending tasks */
+        }
+
+        /* Last item doesn't need a border */
+        .pending-tasks li:last-child {
+            border-bottom: none;
+        }
+
+        /* Dark mode specific border for pending tasks */
+        body.dark-mode .pending-tasks li {
+            border-bottom: 1px solid #4a4a4a;
+        }
+
+        /* Light mode specific border for pending tasks */
+        body.light-mode .pending-tasks li {
+            border-bottom: 1px solid #dee2e6;
         }
 
         /* Responsive Design */
@@ -271,20 +290,31 @@
         if (body.classList.contains('dark-mode')) {
             body.classList.remove('dark-mode');
             body.classList.add('light-mode');
-            document.querySelector('.theme-toggle').textContent = '🌙';
+            document.querySelector('.theme-toggle').textContent = '☀️';
         } else {
             body.classList.remove('light-mode');
             body.classList.add('dark-mode');
-            document.querySelector('.theme-toggle').textContent = '☀️';
+            document.querySelector('.theme-toggle').textContent = '🌙';
         }
     }
 
     // Fetch all todos
     async function fetchTodos() {
-        const response = await fetch('/api/todos');
-        const todos = await response.json();
-        renderTodos(todos);
-        renderPendingTasks(todos);
+        try {
+            const response = await fetch('/api/todos');
+            const todos = await response.json();
+            renderTodos(todos);
+            renderPendingTasks(todos);
+        } catch (error) {
+            console.error('Error fetching todos:', error);
+            // For demo/development purposes, use sample data if the API call fails
+            const sampleTodos = [
+                { id: '1', heading: 'Sample Task 1', description: 'This is a sample task', date: '2025-04-10', time: '10:00', completed: false },
+                { id: '2', heading: 'Sample Task 2', description: 'Another sample task', date: '2025-04-11', time: '14:00', completed: true }
+            ];
+            renderTodos(sampleTodos);
+            renderPendingTasks(sampleTodos);
+        }
     }
 
     // Add a new task
@@ -302,21 +332,27 @@
         if (heading && description && date && time) {
             const newTodo = {
                 heading,
-                task: description, // Mapping "task" to description
+                description,
                 date,
                 time,
                 completed: false
             };
-            await fetch('/api/todos', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(newTodo)
-            });
-            headingInput.value = '';
-            descriptionInput.value = '';
-            dateInput.value = '';
-            timeInput.value = '';
-            fetchTodos();
+
+            try {
+                await fetch('/api/todos', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(newTodo)
+                });
+                headingInput.value = '';
+                descriptionInput.value = '';
+                dateInput.value = '';
+                timeInput.value = '';
+                fetchTodos();
+            } catch (error) {
+                console.error('Error adding todo:', error);
+                alert('Failed to add task. Please try again.');
+            }
         } else {
             alert('Please fill in all fields.');
         }
@@ -326,25 +362,43 @@
     async function updateTask(id, heading, description, date, time, completed) {
         const updatedTodo = {
             heading,
-            task: description,
+            description,
             date,
             time,
             completed
         };
-        await fetch(`/api/todos/${id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(updatedTodo)
-        });
-        fetchTodos();
+
+        try {
+            await fetch(`/api/todos/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(updatedTodo)
+            });
+            // Immediately update the pending tasks list when completion status changes
+            fetchTodos();
+        } catch (error) {
+            console.error('Error updating todo:', error);
+            alert('Failed to update task. Please try again.');
+        }
+    }
+
+    // Toggle completion status
+    async function toggleCompletion(id, heading, description, date, time, completed) {
+        // Toggle the completion status and update the task
+        await updateTask(id, heading, description, date, time, completed);
     }
 
     // Delete a task
     async function deleteTask(id) {
-        await fetch(`/api/todos/${id}`, {
-            method: 'DELETE'
-        });
-        fetchTodos();
+        try {
+            await fetch(`/api/todos/${id}`, {
+                method: 'DELETE'
+            });
+            fetchTodos();
+        } catch (error) {
+            console.error('Error deleting todo:', error);
+            alert('Failed to delete task. Please try again.');
+        }
     }
 
     // Render todos
@@ -354,16 +408,17 @@
         todos.forEach(todo => {
             const li = document.createElement('li');
             li.className = 'task-item';
+            li.dataset.id = todo.id;
             li.innerHTML = `
                 <div class="task-header">
-                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="updateTask('${todo.id}', this.parentElement.nextElementSibling.querySelector('input[type=text]').value, this.parentElement.nextElementSibling.nextElementSibling.querySelector('textarea').value, this.parentElement.nextElementSibling.nextElementSibling.nextElementSibling.querySelector('input[type=date]').value, this.parentElement.nextElementSibling.nextElementSibling.nextElementSibling.nextElementSibling.querySelector('input[type=time]').value, this.checked)">
+                    <input type="checkbox" ${todo.completed ? 'checked' : ''} onchange="toggleCompletion('${todo.id}', document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=text]').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] textarea').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=date]').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=time]').value, this.checked)">
                     <h3>${todo.heading}</h3>
                 </div>
-                <input type="text" value="${todo.heading}" onblur="updateTask('${todo.id}', this.value, this.nextElementSibling.value, this.nextElementSibling.nextElementSibling.value, this.nextElementSibling.nextElementSibling.nextElementSibling.value, ${todo.completed})">
-                <textarea onblur="updateTask('${todo.id}', this.previousElementSibling.value, this.value, this.nextElementSibling.value, this.nextElementSibling.nextElementSibling.value, ${todo.completed})">${todo.task}</textarea>
-                <input type="date" value="${todo.date}" onblur="updateTask('${todo.id}', this.previousElementSibling.previousElementSibling.value, this.previousElementSibling.value, this.value, this.nextElementSibling.value, ${todo.completed})">
-                <input type="time" value="${todo.time}" onblur="updateTask('${todo.id}', this.previousElementSibling.previousElementSibling.previousElementSibling.value, this.previousElementSibling.previousElementSibling.value, this.previousElementSibling.value, this.value, ${todo.completed})">
-                <button class="edit-btn" onclick="this.previousElementSibling.previousElementSibling.previousElementSibling.focus()">✏️</button>
+                <input type="text" value="${todo.heading}" onblur="updateTask('${todo.id}', this.value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] textarea').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=date]').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=time]').value, ${todo.completed})">
+                <textarea onblur="updateTask('${todo.id}', document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=text]').value, this.value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=date]').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=time]').value, ${todo.completed})">${todo.description}</textarea>
+                <input type="date" value="${todo.date}" onblur="updateTask('${todo.id}', document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=text]').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] textarea').value, this.value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=time]').value, ${todo.completed})">
+                <input type="time" value="${todo.time}" onblur="updateTask('${todo.id}', document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=text]').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] textarea').value, document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=date]').value, this.value, ${todo.completed})">
+                <button class="edit-btn" onclick="document.querySelector('.task-item[data-id=\\'${todo.id}\\'] input[type=text]').focus()">✏️</button>
                 <button class="delete-btn" onclick="deleteTask('${todo.id}')">🗑️</button>
             `;
             taskList.appendChild(li);
@@ -374,16 +429,25 @@
     function renderPendingTasks(todos) {
         const pendingTasks = document.getElementById('pending-tasks');
         pendingTasks.innerHTML = '';
+
+        // Filter only incomplete tasks
         const pending = todos.filter(todo => !todo.completed);
+
         pending.forEach(todo => {
             const li = document.createElement('li');
             li.innerHTML = `
                 <strong>${todo.heading}</strong><br>
-                ${todo.task}<br>
-                <small>${todo.date} at ${todo.time}</small>
+                ${todo.date} at ${todo.time}
             `;
             pendingTasks.appendChild(li);
         });
+
+        // Show a message if there are no pending tasks
+        if (pending.length === 0) {
+            const li = document.createElement('li');
+            li.innerHTML = '<em>No pending tasks</em>';
+            pendingTasks.appendChild(li);
+        }
     }
 
     // Initial fetch
